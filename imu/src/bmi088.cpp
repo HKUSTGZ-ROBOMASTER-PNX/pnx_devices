@@ -1,12 +1,12 @@
 #include "bmi088.hpp"
 
 #include "bsp_dwt.hpp"
+#include "bsp_pwm.hpp"
 #include "numeric.hpp"
 #include "os.hpp"
 
 #include "main.h"
 #include "spi.h"
-#include "tim.h"
 
 #include <cmath>
 #include <cstring>
@@ -144,8 +144,8 @@ void Bmi088::temperature_control(float target_temp) {
   temp_pid_.update_result();
 
   float duty_ratio = temp_pid_.result_ / 999.0f;
-  duty_ratio = numeric::float_constrain(duty_ratio, 0.0f, 0.2f);
-  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, static_cast<uint32_t>(duty_ratio * 999.0f));
+  duty_ratio = numeric::float_constrain(duty_ratio, 0.0f, 0.08f);
+  bsp::pwm_set_duty(bsp::PwmInstance::Tim3_Ch4, duty_ratio);
 }
 
 void Bmi088::verify_acc_chip_id() {
