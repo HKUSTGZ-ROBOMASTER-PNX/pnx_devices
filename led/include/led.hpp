@@ -2,21 +2,23 @@
 
 #include <cstdint>
 
-namespace devices {
+namespace led
+{
 
-enum class Color : uint8_t {
-  Red = 0,
-  Green,
-  Blue,
-  White,
+enum class color : uint8_t
+{
+    red = 0,
+    green,
+    blue,
+    white,
 };
 
 void init();
-void on(Color color);
-void off(Color color);
-void toggle(Color color);
-void blink(Color color);
+void on(color c);
+void off(color c);
+void toggle(color c);
+void blink(color c);
 void all_off();
 void all_on();
 
-}  // namespace devices
+} // namespace led
