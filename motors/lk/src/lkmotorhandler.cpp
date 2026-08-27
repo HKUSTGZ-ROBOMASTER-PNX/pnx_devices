@@ -20,28 +20,31 @@ lkmotorhandler::lkmotorhandler()
     }
 }
 
-bool lkmotorhandler::register_motor(motor* motor)
+bool lkmotorhandler::register_motor(motor& device) noexcept
 {
-    auto* lk = static_cast<lkmotor*>(motor);
-    if (lk == nullptr || lk->can_id() < 0x141 || lk->can_id() > 0x144)
+    if (device.get_protocol() != protocol::lk)
+    {
+        return false;
+    }
+    auto& lk = static_cast<lkmotor&>(device);
+    if (lk.can_id() < 0x141 || lk.can_id() > 0x144)
     {
         return false;
     }
 
-    if (!ensure_bus(lk->can_bus(), lk->can_type(), rx_entry, this))
+    if (!ensure_bus(lk.can_bus(), lk.can_type(), rx_entry, this))
     {
         return false;
     }
 
-    const uint8_t bus = bus_index(lk->can_bus());
-    const uint8_t slot = static_cast<uint8_t>(lk->can_id() - 0x141);
-    motor_list_[bus][slot] = lk;
+    const uint8_t bus = bus_index(lk.can_bus());
+    const uint8_t slot = static_cast<uint8_t>(lk.can_id() - 0x141);
+    motor_list_[bus][slot] = &lk;
 
-    track(lk);
     return true;
 }
 
-void lkmotorhandler::send_control()
+void lkmotorhandler::send_control() noexcept
 {
     for (uint8_t bus = 0; bus < bsp::can::bus_count; ++bus)
     {

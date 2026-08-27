@@ -20,24 +20,28 @@ djimotorhandler::djimotorhandler()
     }
 }
 
-bool djimotorhandler::register_motor(motor* motor)
+bool djimotorhandler::register_motor(motor& device) noexcept
 {
-    auto* dji = static_cast<djimotor*>(motor);
-    if (dji == nullptr || dji->can_id() < 0x201 || dji->can_id() > 0x208)
+    if (device.get_protocol() != protocol::dji)
+    {
+        return false;
+    }
+    auto& dji = static_cast<djimotor&>(device);
+    if (dji.can_id() < 0x201 || dji.can_id() > 0x208)
     {
         return false;
     }
 
-    if (!ensure_bus(dji->can_bus(), dji->can_type(), rx_entry, this))
+    if (!ensure_bus(dji.can_bus(), dji.can_type(), rx_entry, this))
     {
         return false;
     }
 
-    const uint8_t bus = bus_index(dji->can_bus());
-    const uint8_t slot = static_cast<uint8_t>(dji->can_id() - 0x201);
-    motor_list_[bus][slot] = dji;
+    const uint8_t bus = bus_index(dji.can_bus());
+    const uint8_t slot = static_cast<uint8_t>(dji.can_id() - 0x201);
+    motor_list_[bus][slot] = &dji;
 
-    if (dji->can_id() <= 0x204)
+    if (dji.can_id() <= 0x204)
     {
         use_low_frame_[bus] = true;
     }
@@ -46,11 +50,10 @@ bool djimotorhandler::register_motor(motor* motor)
         use_high_frame_[bus] = true;
     }
 
-    track(dji);
     return true;
 }
 
-void djimotorhandler::send_control()
+void djimotorhandler::send_control() noexcept
 {
     for (uint8_t bus = 0; bus < bsp::can::bus_count; ++bus)
     {

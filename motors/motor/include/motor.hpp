@@ -1,28 +1,20 @@
 #pragma once
 
 #include "bsp_can.hpp"
+#include "motorapi.hpp"
 
 #include <cstdint>
-#include <type_traits>
 
 namespace motors
 {
 
-enum class state : uint8_t
+enum class protocol : uint8_t
 {
-    offline = 0,
-    online,
-    blocked,
-};
-
-enum class mode : uint8_t
-{
-    relax = 0,
-    torque,
-    mit,
-    pos_speed,
-    speed,
-    multi,
+    dji = 0,
+    dm,
+    lk,
+    xv2,
+    count,
 };
 
 struct config
@@ -33,47 +25,6 @@ struct config
     mode control_mode = mode::relax;
 };
 
-struct command
-{
-    int16_t current = 0;
-    float torque = 0.0f;
-    float position = 0.0f;
-    float velocity = 0.0f;
-    float kp = 0.0f;
-    float kd = 0.0f;
-};
-
-struct feedback
-{
-    float position = 0.0f;
-    float velocity = 0.0f;
-    float torque = 0.0f;
-    float current = 0.0f;
-    float temperature = 0.0f;
-    uint8_t error_code = 0;
-};
-
-struct capabilities
-{
-    bool current = false;
-    bool torque = false;
-    bool mit = false;
-    bool pos_speed = false;
-    bool velocity = false;
-};
-
-class api
-{
-public:
-    virtual ~api() = default;
-
-    virtual void set_command(const command& next_command, mode next_mode) = 0;
-    virtual const feedback& get_feedback() const = 0;
-    virtual state status() const = 0;
-    virtual capabilities get_capabilities() const = 0;
-    virtual bool supports(mode request_mode) const = 0;
-    virtual void relax() = 0;
-};
 
 class motor : public api
 {
@@ -87,6 +38,7 @@ public:
 
     virtual void set_output() = 0;
     virtual void parse_feedback(const uint8_t* data, uint8_t len) = 0;
+    virtual protocol get_protocol() const noexcept = 0;
 
     state alive_check();
 
@@ -133,9 +85,6 @@ protected:
     config config_;
 };
 
-template <typename T>
-inline constexpr bool is_motor_v = std::is_base_of_v<motor, T>;
-
 inline void motor::relax()
 {
     control_mode = mode::relax;
@@ -155,6 +104,8 @@ inline bool motor::supports(mode request_mode) const
     {
         case mode::relax:
             return true;
+        case mode::current:
+            return caps.current;
         case mode::torque:
             return caps.torque || caps.current;
         case mode::mit:
@@ -174,7 +125,7 @@ inline void motor::set_current(int16_t current)
 {
     command next{};
     next.current = current;
-    set_command(next, mode::torque);
+    set_command(next, mode::current);
 }
 
 inline void motor::set_torque(float torque)

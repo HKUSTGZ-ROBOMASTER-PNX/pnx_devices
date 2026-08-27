@@ -20,24 +20,27 @@ dmmotorhandler::dmmotorhandler()
     }
 }
 
-bool dmmotorhandler::register_motor(motor* motor)
+bool dmmotorhandler::register_motor(motor& device) noexcept
 {
-    auto* dm = static_cast<dmmotor*>(motor);
-    if (dm == nullptr || dm->can_id() < dm_id_base || dm->can_id() >= dm_id_base + dm_max_motors)
+    if (device.get_protocol() != protocol::dm)
+    {
+        return false;
+    }
+    auto& dm = static_cast<dmmotor&>(device);
+    if (dm.can_id() < dm_id_base || dm.can_id() >= dm_id_base + dm_max_motors)
     {
         return false;
     }
 
-    if (!ensure_bus(dm->can_bus(), dm->can_type(), rx_entry, this))
+    if (!ensure_bus(dm.can_bus(), dm.can_type(), rx_entry, this))
     {
         return false;
     }
 
-    const uint8_t bus = bus_index(dm->can_bus());
-    const uint8_t slot = static_cast<uint8_t>(dm->can_id() - dm_id_base);
-    motor_list_[bus][slot] = dm;
+    const uint8_t bus = bus_index(dm.can_bus());
+    const uint8_t slot = static_cast<uint8_t>(dm.can_id() - dm_id_base);
+    motor_list_[bus][slot] = &dm;
 
-    track(dm);
     return true;
 }
 
@@ -62,7 +65,40 @@ uint32_t dmmotorhandler::control_id(const dmmotor* motor) const
     }
 }
 
-void dmmotorhandler::send_control()
+bool dmmotorhandler::start() noexcept
+{
+    bool ok = true;
+    for (auto& row : motor_list_)
+    {
+        for (dmmotor* device : row)
+        {
+            if (device == nullptr || device->control_mode == mode::multi)
+            {
+                continue;
+            }
+            device->enablefailed = false;
+            enable_block(device);
+            if (device->enablefailed)
+            {
+                ok = false;
+            }
+        }
+    }
+    return ok;
+}
+
+void dmmotorhandler::stop() noexcept
+{
+    for (auto& row : motor_list_)
+    {
+        for (dmmotor* device : row)
+        {
+            disable(device);
+        }
+    }
+}
+
+void dmmotorhandler::send_control() noexcept
 {
     for (uint8_t bus = 0; bus < bsp::can::bus_count; ++bus)
     {

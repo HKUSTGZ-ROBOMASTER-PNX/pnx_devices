@@ -18,12 +18,13 @@ constexpr uint32_t dm_master_id_base = robot::motors::dm::master_id_base;
 class dmmotorhandler : public motorhandler
 {
 public:
-    using motorhandler::register_motor;
-
     static dmmotorhandler& instance();
 
-    bool register_motor(motor* motor) override;
-    void send_control() override;
+    protocol supported_protocol() const noexcept override { return protocol::dm; }
+    bool register_motor(motor& device) noexcept override;
+    bool start() noexcept override;
+    void stop() noexcept override;
+    void send_control() noexcept override;
 
     void enable_block(dmmotor* motor);
     void enable(dmmotor* motor);

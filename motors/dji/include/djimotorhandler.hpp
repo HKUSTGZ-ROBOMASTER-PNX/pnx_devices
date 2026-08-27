@@ -15,12 +15,11 @@ constexpr uint32_t dji_control_id_high = 0x1FF;
 class djimotorhandler : public motorhandler
 {
 public:
-    using motorhandler::register_motor;
-
     static djimotorhandler& instance();
 
-    bool register_motor(motor* motor) override;
-    void send_control() override;
+    protocol supported_protocol() const noexcept override { return protocol::dji; }
+    bool register_motor(motor& device) noexcept override;
+    void send_control() noexcept override;
 
     void blocked_check();
 

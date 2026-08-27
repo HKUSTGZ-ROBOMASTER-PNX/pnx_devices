@@ -60,6 +60,7 @@ public:
     explicit dmmotor(config cfg, float kt = 1.0f) : motor(cfg, kt) {}
 
     void parse_feedback(const uint8_t* data, uint8_t len) override;
+    protocol get_protocol() const noexcept final { return protocol::dm; }
     capabilities get_capabilities() const override { return {false, false, true, true, true}; }
 
     void receive_data(const uint8_t* buffer);
