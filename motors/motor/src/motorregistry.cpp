@@ -1,4 +1,4 @@
-#include "motorregistry.hpp"
+#include "motorservice.hpp"
 
 #include "djimotorhandler.hpp"
 #include "dmmotorhandler.hpp"
@@ -6,10 +6,10 @@
 #include "xv2motorhandler.hpp"
 #include "robot_config.hpp"
 
-namespace motors::detail
+namespace motors
 {
 
-motorhandler* handler_for(protocol value) noexcept
+motorhandler* motor_service::handler_for(protocol value) noexcept
 {
     switch (value)
     {
@@ -43,4 +43,4 @@ motorhandler* handler_for(protocol value) noexcept
     }
 }
 
-} // namespace motors::detail
+} // namespace motors

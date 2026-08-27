@@ -1,7 +1,5 @@
 #include "motorservice.hpp"
 
-#include "motorregistry.hpp"
-
 namespace motors
 {
 
@@ -34,7 +32,7 @@ bool motor_service::register_motor(motor& device) noexcept
     motorhandler*& handler = handlers_[index];
     if (handler == nullptr)
     {
-        handler = detail::handler_for(device.get_protocol());
+        handler = handler_for(device.get_protocol());
     }
     if (handler == nullptr || handler->supported_protocol() != device.get_protocol() ||
         !handler->register_motor(device))

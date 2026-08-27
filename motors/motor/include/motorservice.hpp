@@ -23,6 +23,9 @@ private:
     static constexpr std::size_t protocol_count = static_cast<std::size_t>(protocol::count);
     static constexpr std::size_t max_motors = bsp::can::bus_count * 8U;
 
+    // Resolves the static-lifetime handler for a protocol.
+    static motorhandler* handler_for(protocol value) noexcept;
+
     // Registered handlers and motors are non-owning and must outlive this service.
     std::array<motorhandler*, protocol_count> handlers_{};
     std::array<motor*, max_motors> motors_{};
