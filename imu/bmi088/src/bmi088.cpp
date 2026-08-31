@@ -1,6 +1,6 @@
 #include "bmi088.hpp"
 
-#include "bsp_exti.h"
+#include "bsp_exti.hpp"
 #include "bsp_pwm.hpp"
 #include "bsp_spi.hpp"
 #include "constrain.hpp"
@@ -257,19 +257,18 @@ bool bmi088::start_temperature_control(const temp_control_config& cfg)
     return true;
 }
 
-void bmi088::set_gyro_data_ready_callback(data_ready_callback callback, void* user)
+void bmi088::set_gyro_data_ready_callback(data_ready_callback callback)
 {
     gyro_data_ready_callback_ = callback;
-    gyro_data_ready_user_ = user;
-    bsp_exti_attach(GYRO_INT_Pin, gyro_data_ready_entry, this);
+    bsp::exti::attach(GYRO_INT_Pin,
+                      bsp::exti::interrupt_callback::bind<bmi088, &bmi088::gyro_data_ready_entry>(this));
 }
 
-void bmi088::gyro_data_ready_entry(void* user)
+void bmi088::gyro_data_ready_entry()
 {
-    auto* self = static_cast<bmi088*>(user);
-    if (self != nullptr && self->gyro_data_ready_callback_ != nullptr)
+    if (gyro_data_ready_callback_)
     {
-        self->gyro_data_ready_callback_(self->gyro_data_ready_user_);
+        gyro_data_ready_callback_();
     }
 }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "callback.hpp"
 #include "imu.hpp"
 
 #include "iir.hpp"
@@ -11,7 +12,7 @@ namespace imu
 class bmi088 : public imu
 {
 public:
-    using data_ready_callback = void (*)(void* user);
+    using data_ready_callback = core::callback<void()>;
 
     struct temp_control_config
     {
@@ -42,7 +43,7 @@ public:
     bool initialize_transport();
     bool start_temperature_control(const temp_control_config& cfg);
     bool temperature_ready() const { return temperature_ready_; }
-    void set_gyro_data_ready_callback(data_ready_callback callback, void* user);
+    void set_gyro_data_ready_callback(data_ready_callback callback);
     uint32_t spi_read_error_count() const { return spi_read_error_count_; }
     uint32_t spi_write_error_count() const { return spi_write_error_count_; }
     uint32_t spi_lock_error_count() const { return spi_lock_error_count_; }
@@ -126,7 +127,7 @@ private:
     static constexpr ULONG temp_control_period_ticks = 125;
 
     static void temp_thread_entry(ULONG arg);
-    static void gyro_data_ready_entry(void* user);
+    void gyro_data_ready_entry();
     float calculate_temperature_duty(float temperature);
     float calculate_approach_duty(float temperature);
     bool valid_temperature(float temperature) const;
@@ -146,8 +147,7 @@ private:
     volatile bool temperature_ready_ = false;
     temp_state temp_state_ = temp_state::boost;
     float heater_duty_ = 0.0f;
-    data_ready_callback gyro_data_ready_callback_ = nullptr;
-    void* gyro_data_ready_user_ = nullptr;
+    data_ready_callback gyro_data_ready_callback_{};
     volatile uint32_t spi_read_error_count_ = 0;
     volatile uint32_t spi_write_error_count_ = 0;
     volatile uint32_t spi_lock_error_count_ = 0;

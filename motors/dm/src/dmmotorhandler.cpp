@@ -32,7 +32,7 @@ bool dmmotorhandler::register_motor(motor& device) noexcept
         return false;
     }
 
-    if (!ensure_bus(dm.can_bus(), dm.can_type(), rx_entry, this))
+    if (!ensure_bus(dm.can_bus(), dm.can_type()))
     {
         return false;
     }

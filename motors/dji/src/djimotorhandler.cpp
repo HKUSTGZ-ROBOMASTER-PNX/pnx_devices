@@ -32,7 +32,7 @@ bool djimotorhandler::register_motor(motor& device) noexcept
         return false;
     }
 
-    if (!ensure_bus(dji.can_bus(), dji.can_type(), rx_entry, this))
+    if (!ensure_bus(dji.can_bus(), dji.can_type()))
     {
         return false;
     }

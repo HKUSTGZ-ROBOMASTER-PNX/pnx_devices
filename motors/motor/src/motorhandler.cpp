@@ -8,8 +8,7 @@ uint8_t motorhandler::bus_index(bsp::can::bus bus)
     return static_cast<uint8_t>(bus);
 }
 
-bool motorhandler::ensure_bus(bsp::can::bus bus, bsp::can::bus_type type,
-                              bsp::can::rx_handler entry, void* user_data)
+bool motorhandler::ensure_bus(bsp::can::bus bus, bsp::can::bus_type type)
 {
     const uint8_t idx = bus_index(bus);
     if (idx >= bsp::can::bus_count)
@@ -24,7 +23,8 @@ bool motorhandler::ensure_bus(bsp::can::bus bus, bsp::can::bus_type type,
     {
         return false;
     }
-    if (bsp::can::register_rx_handler(bus, entry, user_data) != types::status::ok)
+    const auto callback = bsp::can::rx_callback::bind<motorhandler, &motorhandler::dispatch_rx>(this);
+    if (bsp::can::register_rx_callback(bus, callback) != types::status::ok)
     {
         return false;
     }
