@@ -44,8 +44,17 @@ bool motor_service::register_motor(motor& device) noexcept
     return true;
 }
 
-bool motor_service::start() noexcept
+types::status motor_service::start(const motor_service_config& config) noexcept
 {
+    if (config.control_period_ticks == 0U || config.alive_check_period_ticks == 0U)
+    {
+        return types::status::invalid_arg;
+    }
+    if (started_)
+    {
+        return types::status::ok;
+    }
+
     bool ok = true;
     for (motorhandler* handler : handlers_)
     {
@@ -54,7 +63,17 @@ bool motor_service::start() noexcept
             ok = false;
         }
     }
-    return ok;
+    if (!ok)
+    {
+        return types::status::error;
+    }
+
+    config_ = config;
+    const std::uint32_t now = static_cast<std::uint32_t>(tx_time_get());
+    last_control_tick_ = now - config_.control_period_ticks;
+    last_alive_check_tick_ = now - config_.alive_check_period_ticks;
+    started_ = true;
+    return types::status::ok;
 }
 
 void motor_service::stop() noexcept
@@ -65,6 +84,26 @@ void motor_service::stop() noexcept
         {
             handler->stop();
         }
+    }
+    started_ = false;
+}
+
+void motor_service::process(std::uint32_t now_ticks) noexcept
+{
+    if (!started_)
+    {
+        return;
+    }
+
+    if ((now_ticks - last_control_tick_) >= config_.control_period_ticks)
+    {
+        send_control();
+        last_control_tick_ = now_ticks;
+    }
+    if ((now_ticks - last_alive_check_tick_) >= config_.alive_check_period_ticks)
+    {
+        alive_check();
+        last_alive_check_tick_ = now_ticks;
     }
 }
 
