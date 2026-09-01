@@ -38,6 +38,23 @@ struct reading
     float sensor_time = 0.0f;
 };
 
+// Common attitude payload produced either by a local AHRS solution or by a
+// direct external IMU. The topic instance identifies the producer, so the
+// payload deliberately carries no source selector.
+struct state
+{
+    float quaternion[4] = {1.0f, 0.0f, 0.0f, 0.0f};
+    float yaw = 0.0f;
+    float pitch = 0.0f;
+    float roll = 0.0f;
+    float total_yaw = 0.0f;
+    float gyro[3] = {};
+    float accel[3] = {};
+    std::uint32_t sequence = 0U;
+    std::uint32_t received_tick = 0U;
+    bool online = false;
+};
+
 struct selftest
 {
     bool acc_chip_id_err = true;
