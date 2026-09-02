@@ -13,34 +13,6 @@ constexpr std::size_t protocol_index(protocol value) noexcept
 
 } // namespace
 
-types::status motor_service::register_all() noexcept
-{
-    if (started_)
-    {
-        return types::status::error;
-    }
-
-    const motor_registry& registry = motor_registry::instance();
-    if (registry.overflowed())
-    {
-        return types::status::error;
-    }
-    if (registry.size() == 0U)
-    {
-        return types::status::not_configured;
-    }
-
-    for (std::size_t index = 0U; index < registry.size(); ++index)
-    {
-        motor* const device = registry.at(index);
-        if (device == nullptr || !register_motor(*device))
-        {
-            return types::status::error;
-        }
-    }
-    return types::status::ok;
-}
-
 bool motor_service::register_motor(motor& device) noexcept
 {
     for (std::size_t i = 0; i < motor_count_; ++i)
