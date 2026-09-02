@@ -28,7 +28,7 @@ bool xv2motorhandler::register_motor(motor& device) noexcept
     }
     auto& xv2 = static_cast<xv2motor&>(device);
 
-    if (!ensure_bus(xv2.can_bus(), xv2.can_type()))
+    if (!ensure_bus(xv2.can_bus()))
     {
         return false;
     }

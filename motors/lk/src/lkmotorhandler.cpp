@@ -32,7 +32,7 @@ bool lkmotorhandler::register_motor(motor& device) noexcept
         return false;
     }
 
-    if (!ensure_bus(lk.can_bus(), lk.can_type()))
+    if (!ensure_bus(lk.can_bus()))
     {
         return false;
     }

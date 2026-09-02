@@ -79,7 +79,7 @@ bool dmimu::initialize(const config& cfg)
     }
     rx_queue_ready_.store(true, std::memory_order_release);
 
-    if (bsp::can::init(cfg_.transport.can_bus, cfg_.transport.can_type) != types::status::ok)
+    if (bsp::can::init(cfg_.transport.can_bus) != types::status::ok)
     {
         rx_queue_ready_.store(false, std::memory_order_release);
         tx_queue_delete(&rx_queue_);

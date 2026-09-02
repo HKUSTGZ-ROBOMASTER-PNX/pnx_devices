@@ -22,7 +22,7 @@ public:
 protected:
     static uint8_t bus_index(bsp::can::bus bus);
 
-    bool ensure_bus(bsp::can::bus bus, bsp::can::bus_type type);
+    bool ensure_bus(bsp::can::bus bus);
 
     virtual void dispatch_rx(bsp::can::bus bus, const bsp::can::rx_frame& frame) = 0;
 
