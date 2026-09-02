@@ -4,10 +4,40 @@
 #include "dmmotorhandler.hpp"
 #include "lkmotorhandler.hpp"
 #include "xv2motorhandler.hpp"
+#include "motorregistry.hpp"
 #include "robot_config.hpp"
 
 namespace motors
 {
+
+motor_registry& motor_registry::instance() noexcept
+{
+    static motor_registry registry;
+    return registry;
+}
+
+bool motor_registry::add(motor& device) noexcept
+{
+    for (std::size_t index = 0U; index < count_; ++index)
+    {
+        if (motors_[index] == &device)
+        {
+            return true;
+        }
+    }
+    if (count_ >= motors_.size())
+    {
+        overflowed_ = true;
+        return false;
+    }
+    motors_[count_++] = &device;
+    return true;
+}
+
+motor* motor_registry::at(std::size_t index) const noexcept
+{
+    return index < count_ ? motors_[index] : nullptr;
+}
 
 motorhandler* motor_service::handler_for(protocol value) noexcept
 {

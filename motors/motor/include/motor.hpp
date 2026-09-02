@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bsp_can.hpp"
+#include "motorregistry.hpp"
 
 #include <cstdint>
 
@@ -91,6 +92,7 @@ public:
     explicit motor(config cfg, float kt = 0.0f) : torque_constant(kt), config_(cfg)
     {
         control_mode = cfg.control_mode;
+        (void)motor_registry::instance().add(*this);
     }
 
     virtual ~motor() = default;

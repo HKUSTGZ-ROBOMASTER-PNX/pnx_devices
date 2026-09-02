@@ -12,6 +12,9 @@ namespace motors
 class motor_service
 {
 public:
+    // Registers every static-lifetime motor constructed before this call.
+    // Use one service per application-owned motor set.
+    types::status register_all() noexcept;
     bool register_motor(motor& device) noexcept;
 
     types::status start() noexcept;
