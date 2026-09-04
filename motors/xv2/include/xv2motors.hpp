@@ -27,6 +27,7 @@ public:
 
     void set_output() override;
     void parse_feedback(const uint8_t* data, uint8_t len) override;
+    protocol get_protocol() const noexcept final { return protocol::xv2; }
     capabilities get_capabilities() const override { return {true, true, false, true, true}; }
 
     void enable(bool sync = false);

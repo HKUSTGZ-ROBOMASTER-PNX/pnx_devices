@@ -11,7 +11,7 @@ namespace
 
 #if HAS_LED
 
-constexpr bsp::spi::bus ws2812_bus = bsp::spi::bus::spi6;
+constexpr bsp::spi::bus ws2812_bus = board::device::led::spi;
 constexpr uint8_t ws2812_low = 0xC0;
 constexpr uint8_t ws2812_high = 0xF0;
 constexpr uint32_t spi_timeout_ms = 1000;

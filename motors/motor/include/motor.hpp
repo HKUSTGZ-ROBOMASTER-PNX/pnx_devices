@@ -3,7 +3,6 @@
 #include "bsp_can.hpp"
 
 #include <cstdint>
-#include <type_traits>
 
 namespace motors
 {
@@ -18,19 +17,12 @@ enum class state : uint8_t
 enum class mode : uint8_t
 {
     relax = 0,
+    current,
     torque,
     mit,
     pos_speed,
     speed,
     multi,
-};
-
-struct config
-{
-    bsp::can::bus can_bus = bsp::can::bus::fdcan1;
-    bsp::can::bus_type can_type = bsp::can::bus_type::classic;
-    uint32_t can_id = 0;
-    mode control_mode = mode::relax;
 };
 
 struct command
@@ -75,6 +67,24 @@ public:
     virtual void relax() = 0;
 };
 
+enum class protocol : uint8_t
+{
+    dji = 0,
+    dm,
+    lk,
+    xv2,
+    count,
+};
+
+struct config
+{
+    bsp::can::bus can_bus = bsp::can::bus::fdcan1;
+    bsp::can::bus_type can_type = bsp::can::bus_type::classic;
+    uint32_t can_id = 0;
+    mode control_mode = mode::relax;
+};
+
+
 class motor : public api
 {
 public:
@@ -87,6 +97,7 @@ public:
 
     virtual void set_output() = 0;
     virtual void parse_feedback(const uint8_t* data, uint8_t len) = 0;
+    virtual protocol get_protocol() const noexcept = 0;
 
     state alive_check();
 
@@ -133,9 +144,6 @@ protected:
     config config_;
 };
 
-template <typename T>
-inline constexpr bool is_motor_v = std::is_base_of_v<motor, T>;
-
 inline void motor::relax()
 {
     control_mode = mode::relax;
@@ -155,6 +163,8 @@ inline bool motor::supports(mode request_mode) const
     {
         case mode::relax:
             return true;
+        case mode::current:
+            return caps.current;
         case mode::torque:
             return caps.torque || caps.current;
         case mode::mit:
@@ -174,7 +184,7 @@ inline void motor::set_current(int16_t current)
 {
     command next{};
     next.current = current;
-    set_command(next, mode::torque);
+    set_command(next, mode::current);
 }
 
 inline void motor::set_torque(float torque)

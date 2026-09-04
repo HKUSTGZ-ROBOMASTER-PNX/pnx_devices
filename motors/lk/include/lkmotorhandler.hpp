@@ -15,12 +15,11 @@ constexpr uint32_t lk_control_id = 0x280;
 class lkmotorhandler : public motorhandler
 {
 public:
-    using motorhandler::register_motor;
-
     static lkmotorhandler& instance();
 
-    bool register_motor(motor* motor) override;
-    void send_control() override;
+    protocol supported_protocol() const noexcept override { return protocol::lk; }
+    bool register_motor(motor& device) noexcept override;
+    void send_control() noexcept override;
 
 private:
     lkmotorhandler();

@@ -20,27 +20,26 @@ xv2motorhandler::xv2motorhandler()
     }
 }
 
-bool xv2motorhandler::register_motor(motor* motor)
+bool xv2motorhandler::register_motor(motor& device) noexcept
 {
-    auto* xv2 = static_cast<xv2motor*>(motor);
-    if (xv2 == nullptr)
+    if (device.get_protocol() != protocol::xv2)
+    {
+        return false;
+    }
+    auto& xv2 = static_cast<xv2motor&>(device);
+
+    if (!ensure_bus(xv2.can_bus()))
     {
         return false;
     }
 
-    if (!ensure_bus(xv2->can_bus(), xv2->can_type(), rx_entry, this))
-    {
-        return false;
-    }
+    const uint8_t bus = bus_index(xv2.can_bus());
+    motor_list_[bus][xv2.address()] = &xv2;
 
-    const uint8_t bus = bus_index(xv2->can_bus());
-    motor_list_[bus][xv2->address()] = xv2;
-
-    track(xv2);
     return true;
 }
 
-void xv2motorhandler::send_control()
+void xv2motorhandler::send_control() noexcept
 {
     for (uint8_t bus = 0; bus < bsp::can::bus_count; ++bus)
     {
