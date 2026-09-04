@@ -43,13 +43,18 @@ struct reading
 // payload deliberately carries no source selector.
 struct state
 {
+    /// Quaternion (w, x, y, z).
     float quaternion[4] = {1.0f, 0.0f, 0.0f, 0.0f};
-    float yaw = 0.0f;
-    float pitch = 0.0f;
-    float roll = 0.0f;
-    float total_yaw = 0.0f;
-    float gyro[3] = {};
-    float accel[3] = {};
+    float roll = 0.0f;       ///< Roll angle, rad.
+    float pitch = 0.0f;      ///< Pitch angle, rad.
+    float yaw = 0.0f;        ///< Yaw angle, rad.
+    float total_yaw = 0.0f;  ///< Accumulated yaw angle, rad.
+    float gyro_r = 0.0f;     ///< Roll angular rate, rad/s.
+    float gyro_p = 0.0f;     ///< Pitch angular rate, rad/s.
+    float gyro_y = 0.0f;     ///< Yaw angular rate, rad/s.
+    float accel_x = 0.0f;    ///< X-axis acceleration, m/s².
+    float accel_y = 0.0f;    ///< Y-axis acceleration, m/s².
+    float accel_z = 0.0f;    ///< Z-axis acceleration, m/s².
     std::uint32_t sequence = 0U;
     std::uint32_t received_tick = 0U;
     bool online = false;
