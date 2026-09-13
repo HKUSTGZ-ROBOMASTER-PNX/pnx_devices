@@ -67,7 +67,8 @@ public:
 
     struct transport_config
     {
-        bsp::can::bus can_bus = bsp::can::bus::fdcan3;
+        // The composition layer must select a board-supported bus explicitly.
+        bsp::can::bus can_bus = bsp::can::bus::none;
         bsp::can::bus_type can_type = bsp::can::bus_type::classic;
         uint32_t can_id = 0x01U;
         uint32_t master_id = 0x11U;

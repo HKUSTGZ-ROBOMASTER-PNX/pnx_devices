@@ -78,7 +78,7 @@ enum class protocol : uint8_t
 
 struct config
 {
-    bsp::can::bus can_bus = bsp::can::bus::fdcan1;
+    bsp::can::bus can_bus = bsp::can::bus::none;
     bsp::can::bus_type can_type = bsp::can::bus_type::classic;
     uint32_t can_id = 0;
     mode control_mode = mode::relax;

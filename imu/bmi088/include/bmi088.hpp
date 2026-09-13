@@ -1,4 +1,5 @@
 #pragma once
+#include "config.hpp"
 
 #include "callback.hpp"
 #include "imu.hpp"
@@ -120,10 +121,9 @@ private:
     static constexpr float temp_over_exit = 44.8f;
     static constexpr float temp_fault_low = -20.0f;
     static constexpr float temp_fault_high = 85.0f;
-    static constexpr float temp_boost_duty = 0.06f;
-    static constexpr float temp_reboost_duty = 0.05f;
-    static constexpr float temp_approach_max_duty = 0.05f;
-    static constexpr float temp_hold_max_duty = 0.04f;
+    static constexpr float temp_boost_duty = params::bmi088::boost_duty;
+    static constexpr float temp_reboost_duty = params::bmi088::reboost_duty;
+    static constexpr float temp_hold_max_duty = params::bmi088::hold_max_duty;
     static constexpr ULONG temp_control_period_ticks = 125;
 
     static void temp_thread_entry(ULONG arg);

@@ -226,7 +226,12 @@ void bmi088::temperature_control(float target)
 void bmi088::set_heater_duty(float ratio)
 {
 #if HAS_BMI088_HEATER
-    bsp::pwm::set_duty(board::device::bmi088::heater, ratio);
+    if (bsp::pwm::set_duty(board::device::bmi088::heater, ratio) != types::status::ok)
+    {
+        test.temp_ctrl_err = true;
+        temperature_ready_ = false;
+        update_status_from_selftest();
+    }
 #else
     (void)ratio;
 #endif
@@ -313,14 +318,20 @@ void bmi088::temp_thread_entry(ULONG arg)
         static_cast<uint8_t>(control::pid_mode::integral_limit) |
         static_cast<uint8_t>(control::pid_mode::changing_integral_rate) |
         static_cast<uint8_t>(control::pid_mode::derivative_on_measurement));
-    pid.tune(300.0f, 0.06f, 100.0f);
-    pid.max_out = 90.0f;
-    pid.max_iout = 200.0f;
-    pid.scalar_a = 3.5f;
-    pid.scalar_b = 0.2f;
+    pid.tune(params::bmi088::pid_kp, params::bmi088::pid_ki, params::bmi088::pid_kd);
+    pid.max_out = params::bmi088::pid_max_out;
+    pid.max_iout = params::bmi088::pid_max_iout;
+    pid.scalar_a = params::bmi088::pid_scalar_a;
+    pid.scalar_b = params::bmi088::pid_scalar_b;
 
 #if HAS_BMI088_HEATER
-    bsp::pwm::start(board::device::bmi088::heater);
+    if (bsp::pwm::start(board::device::bmi088::heater) != types::status::ok)
+    {
+        self->test.temp_ctrl_err = true;
+        self->temperature_ready_ = false;
+        self->update_status_from_selftest();
+        return;
+    }
 #endif
 
     tx_thread_sleep(1000);
@@ -446,7 +457,8 @@ float bmi088::calculate_approach_duty(float temperature)
     const float ratio = math::clamp((temp_hold_enter - temperature) /
                                     (temp_hold_enter - temp_boost_enter),
                                     0.0f, 1.0f);
-    return 0.029f + (0.04f - 0.025f) * ratio;
+    return params::bmi088::approach_end_duty +
+           (params::bmi088::approach_start_duty - params::bmi088::approach_end_duty) * ratio;
 }
 
 void bmi088::verify_acc_chip_id()
