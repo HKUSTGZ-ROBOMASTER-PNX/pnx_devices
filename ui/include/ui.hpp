@@ -2,11 +2,9 @@
 
 #include "bsp_usart.hpp"
 #include "config.hpp"
-#include "crc.hpp"
-#include "memory.h"
+#include "status.hpp"
 
-#include <cstdint>
-#include <cstring>
+#include <stdint.h>
 
 namespace ui
 {
@@ -44,15 +42,16 @@ enum class operation : uint8_t
     remove,
 };
 
-enum class id_error_code : int32_t
+enum class id_error_code : int8_t
 {
     no_more_space = -1,
-    mutex_timeout = -2,
+    invalid_arg = -2,
 };
 
 struct config
 {
-    bsp::usart::port uart_port = app::uart::referee;
+    bsp::usart::handle uart_port = bsp::usart::handle::none;
+    uint32_t uart_timeout_ms = 100;
 };
 
 class canvas
@@ -60,7 +59,8 @@ class canvas
 public:
     static canvas& instance();
 
-    types::status init(const config& cfg = {});
+    // The application initializes the UART first and serializes all canvas calls.
+    pnxtypes::status init(const config& cfg);
 
     void set_sender_receiver_id(uint16_t sender_id, uint16_t receiver_id);
 
@@ -68,15 +68,16 @@ public:
     int8_t create_rect(int width, object_color color, int layer, int x1, int y1, int x2, int y2);
     int8_t create_circle(int width, object_color color, int layer, int x, int y, int radius);
     int8_t create_ellipse(int width, object_color color, int layer, int x, int y, int x_semiaxis,
-                          int y_semiaxis);
+        int y_semiaxis);
     int8_t create_arc(int width, object_color color, int layer, int x, int y, int x_semiaxis,
-                      int y_semiaxis, int start_angle, int end_angle);
+        int y_semiaxis, int start_angle, int end_angle);
     int8_t create_float(int width, object_color color, int layer, int x, int y, int font_size,
-                        float value);
+        float value);
     int8_t create_int(int width, object_color color, int layer, int x, int y, int font_size,
-                      int value);
+        int value);
+    // Text is borrowed: keep it alive until the object is removed or replaced.
     int8_t create_string(int width, object_color color, int layer, int x, int y, int font_size,
-                         const char* str);
+        const char* str);
 
     void set_visible(int id, bool visible);
     void set_color(int id, object_color color);
@@ -94,10 +95,11 @@ public:
     void set_string(int id, const char* str);
 
     void remove(int id);
-    void remove_all();
-    void remove_layer(int layer);
+    pnxtypes::status remove_all();
+    pnxtypes::status remove_layer(int layer);
 
-    void update();
+    // One frame per call. Failed submissions retain pending object changes.
+    pnxtypes::status update();
 
 private:
     struct tx_frame_header
@@ -130,6 +132,7 @@ private:
         union detail_dword1_internals
         {
             uint32_t dw;
+
             struct
             {
                 uint32_t operation : 3;
@@ -144,6 +147,7 @@ private:
         union detail_dword2_internals
         {
             uint32_t dw;
+
             struct
             {
                 uint32_t width : 10;
@@ -155,23 +159,27 @@ private:
         union detail_dword3_internals
         {
             uint32_t dw;
+
             struct
             {
                 uint32_t radius : 10;
                 uint32_t reserved : 22;
             } circle __attribute__((packed));
+
             struct
             {
                 uint32_t reserved : 10;
                 uint32_t x2 : 11;
                 uint32_t y2 : 11;
             } line __attribute__((packed));
+
             struct
             {
                 uint32_t reserved : 10;
                 uint32_t x_semiaxis : 11;
                 uint32_t y_semiaxis : 11;
             } ellipse __attribute__((packed));
+
             int int_val;
             uint32_t float_val;
             const char* str_val;
@@ -181,15 +189,18 @@ private:
     struct official_ui_object
     {
         char name[3];
+
         union dword1_union
         {
             uint32_t detail_dword1;
+
             struct
             {
                 uint32_t operation : 3;
                 uint32_t not_used : 29;
             } __attribute__((packed)) detail_dword1_internal;
         } __attribute__((packed)) dword1;
+
         uint32_t detail_dword2;
         uint32_t detail_dword3;
     } __attribute__((packed));
@@ -210,43 +221,24 @@ private:
     static delete_cmd delete_op_;
 
     static constexpr uint8_t element_count_in_packet_table[8] = {0, 1, 2, 5, 5, 5, 7, 7};
-    static constexpr uint16_t content_id_table[8] = {0, 0x0101, 0x0102, 0x0103, 0x0103,
-                                                     0x0103, 0x0104, 0x0104};
+    static constexpr uint16_t content_id_table[8] = {0, 0x0101, 0x0102, 0x0103, 0x0103, 0x0103,
+        0x0104, 0x0104};
 
     config cfg_{};
     uint32_t increase_id_ = 1;
-    bool pending_string_update_ = false;
-    uint8_t pending_string_index_ = 0;
     uint8_t scan_offset_ = 0;
     bool initialized_ = false;
 
     tx_frame_header* frame_header();
     official_ui_object* buffer_nth_object(uint8_t index);
-    char* buffer_string();
     static bool valid_object_id(int id);
-
-    template <typename Callback>
-    void loop_scan_objects(uint8_t from_index, uint8_t until_index, Callback cb)
-    {
-        const uint8_t upper_bound =
-            (until_index <= from_index) ? static_cast<uint8_t>(until_index + total_count)
-                                        : until_index;
-        for (uint8_t i = from_index; i < upper_bound; ++i)
-        {
-            if (!cb(i % total_count, object_list_[i % total_count]))
-            {
-                break;
-            }
-        }
-    }
-
-    void loop_increment(uint8_t& index) { index = static_cast<uint8_t>((index + 1) % total_count); }
+    static uint8_t string_length(const char* text);
 
     int8_t create_and_init_object();
 
-    void send_data(uint8_t* data, uint16_t len);
-    void transmit_string_object(uint8_t index, operation op);
-    void transmit_other_objects(uint8_t count);
+    pnxtypes::status send_frame(uint16_t len);
+    pnxtypes::status transmit_string_object(uint8_t index, operation op);
+    pnxtypes::status transmit_other_objects(uint8_t count);
 };
 
 } // namespace ui
