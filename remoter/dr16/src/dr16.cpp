@@ -47,6 +47,12 @@ inline sw_state map_switch(uint8_t raw)
 
 pnxtypes::status decode(const uint8_t* bytes, uint16_t size, remotes::reading& out)
 {
+    if (!remotes::enabled())
+    {
+        out = {};
+        return pnxtypes::status::ok;
+    }
+
     if (bytes == nullptr || size != frame_size)
     {
         return pnxtypes::status::invalid_arg;
@@ -89,7 +95,7 @@ pnxtypes::status decode(const uint8_t* bytes, uint16_t size, remotes::reading& o
     decoded.mouse_right = frame.mouse_right != 0;
 
     std::memcpy(&decoded.key, &frame.key, sizeof(decoded.key));
-    out = decoded;
+    out = remotes::enabled() ? decoded : remotes::reading{};
     return pnxtypes::status::ok;
 }
 } // namespace remotes::dr16

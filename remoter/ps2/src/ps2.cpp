@@ -1,4 +1,5 @@
 #include "ps2.hpp"
+#include "remoter.hpp"
 #include <cmath>
 
 namespace remotes::ps2
@@ -28,6 +29,12 @@ constexpr float apply_axis_deadzone(float value, float deadzone)
 
 pnxtypes::status decode(const frame& raw, sample& out, float deadzone) noexcept
 {
+    if (!remotes::enabled())
+    {
+        out = {};
+        return pnxtypes::status::ok;
+    }
+
     if (!std::isfinite(deadzone) || deadzone < 0.0f || deadzone >= 1.0f)
     {
         return pnxtypes::status::invalid_arg;
@@ -44,7 +51,7 @@ pnxtypes::status decode(const frame& raw, sample& out, float deadzone) noexcept
     decoded.ry = apply_axis_deadzone(-normalize_axis(raw.bytes[6], 128U), deadzone);
     decoded.lx = apply_axis_deadzone(normalize_axis(raw.bytes[7], 127U), deadzone);
     decoded.ly = apply_axis_deadzone(-normalize_axis(raw.bytes[8], 128U), deadzone);
-    out = decoded;
+    out = remotes::enabled() ? decoded : sample{};
     return pnxtypes::status::ok;
 }
 
@@ -68,8 +75,8 @@ pnxtypes::status spi::start()
     {
         return status::busy;
     }
-    constexpr uint8_t query[frame_size]{0x01U, 0x42U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U,
-        0x00U, 0x00U};
+    constexpr uint8_t query[frame_size]{0x01U, 0x42U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U,
+        0x00U};
     for (uint8_t i = 0; i < frame_size; ++i)
     {
         tx_[i] = query[i];
