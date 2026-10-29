@@ -4,6 +4,11 @@
 
 namespace remotes
 {
+// Shared by DR16, VT03 and PS2. Disabled decode returns a neutral output even on bad input.
+// Does not stop transport reception; re-enabling uses subsequent decoded frames.
+void set_enabled(bool enabled) noexcept;
+bool enabled() noexcept;
+
 enum class sw_state : uint8_t
 {
     low = 0,
