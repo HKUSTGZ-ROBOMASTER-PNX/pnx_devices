@@ -13,9 +13,29 @@ struct frame
     uint8_t bytes[frame_size]{};
 };
 
+struct button_state
+{
+    bool select = false;
+    bool l3 = false;
+    bool r3 = false;
+    bool start = false;
+    bool up = false;
+    bool right = false;
+    bool down = false;
+    bool left = false;
+    bool l2 = false;
+    bool r2 = false;
+    bool l1 = false;
+    bool r1 = false;
+    bool triangle = false;
+    bool circle = false;
+    bool cross = false;
+    bool square = false;
+};
+
 struct sample
 {
-    uint16_t buttons = 0; // Active-high PS2 button bitmap.
+    button_state buttons{}; // True while pressed.
     float lx = 0.0f;
     float ly = 0.0f;
     float rx = 0.0f;

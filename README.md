@@ -167,6 +167,11 @@ remotes::ps2::spi gamepad{user_config::ps2_spi, user_config::ps2_cs, tx, rx};
 `busy` 时让出 CPU 等待；超时调用 `cancel()` 并检查结果，缓冲区保留到完成或成功取消。
 SPI 使用模式 3、LSB first 和中断；H723 字节间隔为 10 个 SCK 周期，手柄使用模拟模式。
 
+`decode()` 输出 `remotes::ps2::sample`，其中 `lx`、`ly`、`rx`、`ry` 为归一化摇杆值；
+`buttons` 包含 `select`、`start`、`l1`、`l2`、`l3`、`r1`、`r2`、`r3`、`up`、`down`、
+`left`、`right`、`triangle`、`circle`、`cross`、`square`。每个字段在按下时为 `true`，
+例如 `sample.buttons.cross`；按键边沿和失联判断由应用处理。
+
 ## 裁判系统 UI
 
 在 JSON 选择 `ui_uart`，默认 USART1。初始化串口和 canvas，再设置实际发送方、接收方 ID：

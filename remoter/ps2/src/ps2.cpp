@@ -45,8 +45,24 @@ pnxtypes::status decode(const frame& raw, sample& out, float deadzone) noexcept
     }
 
     sample decoded{};
-    decoded.buttons = static_cast<uint16_t>(
+    const uint16_t buttons = static_cast<uint16_t>(
         ~(static_cast<uint16_t>(raw.bytes[3]) | (static_cast<uint16_t>(raw.bytes[4]) << 8U)));
+    decoded.buttons.select = (buttons & (1U << 0)) != 0;
+    decoded.buttons.l3 = (buttons & (1U << 1)) != 0;
+    decoded.buttons.r3 = (buttons & (1U << 2)) != 0;
+    decoded.buttons.start = (buttons & (1U << 3)) != 0;
+    decoded.buttons.up = (buttons & (1U << 4)) != 0;
+    decoded.buttons.right = (buttons & (1U << 5)) != 0;
+    decoded.buttons.down = (buttons & (1U << 6)) != 0;
+    decoded.buttons.left = (buttons & (1U << 7)) != 0;
+    decoded.buttons.l2 = (buttons & (1U << 8)) != 0;
+    decoded.buttons.r2 = (buttons & (1U << 9)) != 0;
+    decoded.buttons.l1 = (buttons & (1U << 10)) != 0;
+    decoded.buttons.r1 = (buttons & (1U << 11)) != 0;
+    decoded.buttons.triangle = (buttons & (1U << 12)) != 0;
+    decoded.buttons.circle = (buttons & (1U << 13)) != 0;
+    decoded.buttons.cross = (buttons & (1U << 14)) != 0;
+    decoded.buttons.square = (buttons & (1U << 15)) != 0;
     decoded.rx = apply_axis_deadzone(normalize_axis(raw.bytes[5], 127U), deadzone);
     decoded.ry = apply_axis_deadzone(-normalize_axis(raw.bytes[6], 128U), deadzone);
     decoded.lx = apply_axis_deadzone(normalize_axis(raw.bytes[7], 127U), deadzone);
