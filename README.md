@@ -76,26 +76,25 @@ CubeMX 已初始化外设，`init()` 会亮灯，不是单纯注册设备。闪�
 | DM | `dm4310.hpp`、`dm8009p.hpp` | `dm_manager.hpp` | 电机、总线号、控制 ID、反馈 ID |
 | LK | `lk8016.hpp`、`lk9025.hpp` | `lk_manager.hpp` | 电机、总线号、反馈 ID |
 
-以 DJI 为例，应用实现发送回调，将逻辑总线号映射到实际 BSP CAN 资源：
+以 DJI 为例，先注册实际 BSP CAN 资源，再初始化该 CAN；manager 会注册中断回调并直接发送：
 
 ```cpp
 #include "m3508.hpp"
 #include "dji_manager.hpp"
 
-// 应用提供实现：成功提交发送返回 true，失败返回 false。
-bool send_dji(void* context, uint8_t bus, const motor::dji::frame_t& frame);
-
 motor::dji::m3508 wheel;
-motor::dji::manager motors{send_dji};
+motor::dji::manager motors;
 
 bool init_motor()
 {
     motors.set_period(0.001f); // update() 的实际调用周期，秒
-    return motors.register_motor(wheel, 0, 0x201);
+    return motors.register_motor(wheel, bsp::can::handle::fdcan1, 0x201) &&
+           motors.set_tx_period(bsp::can::handle::fdcan1, 0x200, 1000);
 }
 
 void control_tick(uint32_t now_us)
 {
+    (void)motors.update_feedback(wheel);
     wheel.motor_mode = motor::mode::current;
     wheel.cmd.current = 0;
     motors.update();
@@ -103,13 +102,14 @@ void control_tick(uint32_t now_us)
 }
 ```
 
-初始化成功后周期调用 `control_tick()`。收到至少 8 字节的完整反馈后调用
-`motors.receive(bus, feedback_id, data)`。接收与控制不能并发修改同一电机，可先复制反馈，
-再交给控制线程处理。发送回调中的帧只在调用期间有效，异步发送前须复制到持久缓冲区。
+`register_motor()` 必须在 CAN `init()` 前调用，manager 和电机须在回调注销前保持存活。CAN IRQ
+只覆盖固定的最新反馈槽；控制线程周期调用 `update_feedback()`，返回 `true` 表示已消费一帧
+有效反馈。DJI 编码器值超出该型号分辨率时会被拒绝，不刷新在线状态。
 
-逻辑总线号范围为 0～2，不等于 HAL 实例。manager 保存电机引用，电机须保持存活。
-`set_tx_period()` 和 `transmit(now_us)` 使用微秒；`set_period()` 使用秒。
-manager 的 `update()` 已包含健康检查，不要重复调用 `health_tick()`。
+`set_tx_period()` 和 `transmit(now_us)` 使用微秒；`set_period()` 使用秒。只有 BSP 成功接受帧后
+`transmit_count(bus, command_id)` 才递增，其中命令 ID 只能是 `0x200` 或 `0x1FF`。计数允许
+回绕，应用比较它是否变化即可实现发送看门狗。manager 的 `update()` 已包含健康检查，
+不要重复调用 `health_tick()`。
 
 使用速度或位置控制前设置对应 PID，并用 `supports(mode)` 检查支持情况。
 单独调用电机 `update()` 时检查 `motor::result`，manager 不向上传递该结果。

@@ -66,8 +66,7 @@ bool manager::update_feedback(motor& instance) noexcept
                 uint8_t data[8];
                 if (feedback_[bus][slot].take(data))
                 {
-                    instance.receive(data);
-                    return true;
+                    return instance.receive(data);
                 }
                 return false;
             }
@@ -88,8 +87,7 @@ bool manager::receive(bsp::can::handle bus, uint16_t id, const uint8_t data[8]) 
     {
         return false;
     }
-    m->receive(data);
-    return true;
+    return m->receive(data);
 }
 
 void manager::update()
@@ -105,6 +103,16 @@ void manager::update()
             }
         }
     }
+}
+
+uint32_t manager::transmit_count(bsp::can::handle bus, uint16_t id) const noexcept
+{
+    const auto index = static_cast<uint8_t>(bus);
+    if (index == 0 || index >= buses || (id != 0x200 && id != 0x1FF))
+    {
+        return 0;
+    }
+    return transmit_count_[index][id == 0x200 ? 0 : 1];
 }
 
 void manager::transmit(uint32_t now_us)
@@ -136,6 +144,7 @@ void manager::transmit(uint32_t now_us)
                                  frame.data, frame.length) == pnxtypes::status::ok)
             {
                 tx_[bus][group].mark_sent(now_us);
+                ++transmit_count_[bus][group];
             }
         }
     }

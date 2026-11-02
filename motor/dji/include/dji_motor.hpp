@@ -20,7 +20,7 @@ class motor : public ::motor::motor
 public:
     bool supports(mode requested) const noexcept override;
     result update() override;
-    virtual void receive(const uint8_t data[8]) noexcept;
+    virtual bool receive(const uint8_t data[8]) noexcept;
 
     int16_t output() const noexcept
     {

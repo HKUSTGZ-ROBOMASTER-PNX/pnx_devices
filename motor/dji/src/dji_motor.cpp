@@ -63,13 +63,17 @@ result motor::update()
     return result::ok;
 }
 
-void motor::receive(const uint8_t data[8]) noexcept
+bool motor::receive(const uint8_t data[8]) noexcept
 {
-    if (!data)
+    if (!data || config_.encoder_resolution == 0)
     {
-        return;
+        return false;
     }
     const uint16_t encoder = static_cast<uint16_t>((uint16_t(data[0]) << 8) | data[1]);
+    if (encoder >= config_.encoder_resolution)
+    {
+        return false;
+    }
     const int16_t rpm = static_cast<int16_t>((uint16_t(data[2]) << 8) | data[3]);
     const float resolution = static_cast<float>(config_.encoder_resolution);
     if (!initialized_)
@@ -100,5 +104,6 @@ void motor::receive(const uint8_t data[8]) noexcept
     mark_feedback(static_cast<float>(raw_current));
     // Feedback raw current is not calibrated to Nm; retain unknown torque as zero.
     fdb.torque = 0.0f;
+    return true;
 }
 } // namespace motor::dji

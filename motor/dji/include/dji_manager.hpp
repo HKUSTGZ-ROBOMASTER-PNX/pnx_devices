@@ -39,6 +39,7 @@ public:
                tx_[index][id == 0x200 ? 0 : 1].set_period(us);
     }
 
+    uint32_t transmit_count(bsp::can::handle bus, uint16_t id) const noexcept;
     void transmit(uint32_t now_us) override;
 
 private:
@@ -48,6 +49,7 @@ private:
     feedback_buffer feedback_[buses][8]{};
     bool registered_[buses]{};
     tx_schedule tx_[buses][2]{};
+    uint32_t transmit_count_[buses][2]{};
     float period_ = 0.001f;
 };
 } // namespace motor::dji
