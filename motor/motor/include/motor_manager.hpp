@@ -1,9 +1,39 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
+#include "tx_api.h"
 
 namespace motor
 {
+
+// The CAN interrupt stores the latest frame; the control task takes it.
+class feedback_buffer
+{
+public:
+    void push(const uint8_t data[8]) noexcept
+    {
+        std::memcpy(data_, data, sizeof(data_));
+        pending_ = true;
+    }
+
+    bool take(uint8_t data[8]) noexcept
+    {
+        const auto previous = tx_interrupt_control(TX_INT_DISABLE);
+        const bool pending = pending_;
+        if (pending)
+        {
+            std::memcpy(data, data_, sizeof(data_));
+            pending_ = false;
+        }
+        tx_interrupt_control(previous);
+        return pending;
+    }
+
+private:
+    uint8_t data_[8]{};
+    bool pending_ = false;
+};
 
 class manager_interface
 {

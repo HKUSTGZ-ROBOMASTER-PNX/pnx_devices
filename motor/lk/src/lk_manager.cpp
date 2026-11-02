@@ -2,28 +2,87 @@
 
 namespace motor::lk
 {
-bool manager::register_motor(motor& m, uint8_t bus, uint16_t id) noexcept
+bool manager::register_motor(motor& m, bsp::can::handle bus, uint16_t id) noexcept
 {
-    if (bus >= 3 || id < 0x141 || id > 0x144)
+    const auto index = static_cast<uint8_t>(bus);
+    if (index == 0 || index >= buses || id < 0x141 || id > 0x144)
     {
         return false;
     }
-    auto& slot = motors_[bus][id - 0x141];
+    for (const auto& registered_bus : motors_)
+    {
+        for (const auto* registered_motor : registered_bus)
+        {
+            if (registered_motor == &m)
+            {
+                return false;
+            }
+        }
+    }
+    auto& slot = motors_[index][id - 0x141];
     if (slot)
     {
         return false;
     }
+    if (!registered_[index])
+    {
+        if (bsp::can::register_rx_callback(bus,
+                bsp::can::rx_callback::bind<&manager::on_receive>(this)) != pnxtypes::status::ok)
+        {
+            return false;
+        }
+        registered_[index] = true;
+    }
+    const auto previous = tx_interrupt_control(TX_INT_DISABLE);
     slot = &m;
+    tx_interrupt_control(previous);
     return true;
 }
 
-bool manager::receive(uint8_t bus, uint16_t id, const uint8_t data[8]) noexcept
+void manager::on_receive(bsp::can::handle bus, const bsp::can::rx_frame& frame) noexcept
 {
-    if (!data || bus >= 3 || id < 0x141 || id > 0x144)
+    const auto index = static_cast<uint8_t>(bus);
+    if (index == 0 || index >= buses || frame.id_kind != bsp::can::id_type::standard ||
+        frame.remote || frame.len != 8 || frame.id < 0x141 || frame.id > 0x144)
+    {
+        return;
+    }
+    const auto slot = frame.id - 0x141;
+    if (motors_[index][slot])
+    {
+        feedback_[index][slot].push(frame.data);
+    }
+}
+
+bool manager::update_feedback(motor& m) noexcept
+{
+    for (uint8_t bus = 1; bus < buses; ++bus)
+    {
+        for (uint8_t slot = 0; slot < 4; ++slot)
+        {
+            if (motors_[bus][slot] == &m)
+            {
+                uint8_t data[8];
+                if (feedback_[bus][slot].take(data))
+                {
+                    m.receive(data);
+                    return true;
+                }
+                return false;
+            }
+        }
+    }
+    return false;
+}
+
+bool manager::receive(bsp::can::handle bus, uint16_t id, const uint8_t data[8]) noexcept
+{
+    const auto index = static_cast<uint8_t>(bus);
+    if (!data || index == 0 || index >= buses || id < 0x141 || id > 0x144)
     {
         return false;
     }
-    auto* m = motors_[bus][id - 0x141];
+    auto* m = motors_[index][id - 0x141];
     if (!m)
     {
         return false;
@@ -49,11 +108,7 @@ void manager::update()
 
 void manager::transmit(uint32_t now_us)
 {
-    if (!sender_)
-    {
-        return;
-    }
-    for (uint8_t bus = 0; bus < 3; ++bus)
+    for (uint8_t bus = 1; bus < buses; ++bus)
     {
         if (!tx_[bus].due(now_us))
         {
@@ -74,7 +129,8 @@ void manager::transmit(uint32_t now_us)
             frame.data[2 * i] = static_cast<uint8_t>(raw);
             frame.data[2 * i + 1] = static_cast<uint8_t>(raw >> 8);
         }
-        if (populated && sender_(ctx_, bus, frame))
+        if (populated && bsp::can::transmit(static_cast<bsp::can::handle>(bus), frame.id,
+                             frame.data, frame.length) == pnxtypes::status::ok)
         {
             tx_[bus].mark_sent(now_us);
         }

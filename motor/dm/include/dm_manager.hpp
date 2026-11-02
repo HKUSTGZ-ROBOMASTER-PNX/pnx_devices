@@ -2,21 +2,23 @@
 #include "motor_utils.hpp"
 #include "motor_manager.hpp"
 #include "dm_motor.hpp"
+#include "bsp_can.hpp"
 #include <cstdint>
 
 namespace motor::dm
 {
-using send_fn = bool (*)(void*, uint8_t, const frame_t&);
-
 class manager final : public manager_interface
 {
 public:
-    explicit manager(send_fn sender, void* ctx = nullptr) : sender_(sender), ctx_(ctx)
-    {
-    }
+    manager() = default;
+    manager(const manager&) = delete;
+    manager& operator=(const manager&) = delete;
 
-    bool register_motor(motor& m, uint8_t bus, uint16_t control_id, uint16_t feedback_id) noexcept;
-    bool receive(uint8_t bus, uint16_t feedback_id, const uint8_t data[8]) noexcept;
+    // Register before CAN init. The manager and motors must outlive the CAN callbacks.
+    bool register_motor(motor& m, bsp::can::handle bus, uint16_t control_id,
+        uint16_t feedback_id) noexcept;
+    bool receive(bsp::can::handle bus, uint16_t feedback_id, const uint8_t data[8]) noexcept;
+    bool update_feedback(motor& m) noexcept;
     bool special(motor& m, uint8_t opcode) noexcept;
     void update() override;
 
@@ -44,14 +46,14 @@ private:
     {
         motor* ptr = nullptr;
         uint16_t feedback_id = 0;
-        uint8_t bus = 0;
+        bsp::can::handle bus = bsp::can::handle::none;
+        feedback_buffer feedback{};
     };
 
+    void on_receive(bsp::can::handle bus, const bsp::can::rx_frame& frame) noexcept;
     entry entries_[24]{};
     tx_schedule tx_[24]{};
     uint8_t count_ = 0;
     float period_ = 0.001f;
-    send_fn sender_;
-    void* ctx_;
 };
 } // namespace motor::dm

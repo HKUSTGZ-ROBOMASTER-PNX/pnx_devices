@@ -2,13 +2,16 @@
 
 namespace motor::dm
 {
-bool manager::register_motor(motor& m, uint8_t bus, uint16_t control_id,
+bool manager::register_motor(motor& m, bsp::can::handle bus, uint16_t control_id,
     uint16_t feedback_id) noexcept
 {
-    if (bus >= 3 || control_id == 0 || control_id > 0x7ff || feedback_id > 0x7ff || count_ >= 24)
+    if (bus == bsp::can::handle::none || bus > bsp::can::handle::fdcan3 ||
+        control_id == 0 || control_id > 0x7ff ||
+        feedback_id > 0x7ff || count_ >= 24)
     {
         return false;
     }
+    bool registered_bus = false;
     for (uint8_t i = 0; i < count_; ++i)
     {
         if (entries_[i].ptr == &m ||
@@ -16,13 +19,55 @@ bool manager::register_motor(motor& m, uint8_t bus, uint16_t control_id,
         {
             return false;
         }
+        registered_bus = registered_bus || entries_[i].bus == bus;
+    }
+    if (!registered_bus &&
+        bsp::can::register_rx_callback(bus,
+            bsp::can::rx_callback::bind<&manager::on_receive>(this)) != pnxtypes::status::ok)
+    {
+        return false;
     }
     m.set_id(control_id);
-    entries_[count_++] = {&m, feedback_id, bus};
+    const auto previous = tx_interrupt_control(TX_INT_DISABLE);
+    auto& entry = entries_[count_++];
+    entry.ptr = &m;
+    entry.feedback_id = feedback_id;
+    entry.bus = bus;
+    tx_interrupt_control(previous);
     return true;
 }
 
-bool manager::receive(uint8_t bus, uint16_t id, const uint8_t data[8]) noexcept
+void manager::on_receive(bsp::can::handle bus, const bsp::can::rx_frame& frame) noexcept
+{
+    if (frame.id_kind != bsp::can::id_type::standard || frame.remote || frame.len != 8)
+    {
+        return;
+    }
+    for (uint8_t i = 0; i < count_; ++i)
+    {
+        auto& entry = entries_[i];
+        if (entry.bus == bus && frame.id == entry.feedback_id)
+        {
+            entry.feedback.push(frame.data);
+            return;
+        }
+    }
+}
+
+bool manager::update_feedback(motor& m) noexcept
+{
+    for (uint8_t i = 0; i < count_; ++i)
+    {
+        if (entries_[i].ptr == &m)
+        {
+            uint8_t data[8];
+            return entries_[i].feedback.take(data) && m.receive(data);
+        }
+    }
+    return false;
+}
+
+bool manager::receive(bsp::can::handle bus, uint16_t id, const uint8_t data[8]) noexcept
 {
     if (!data)
     {
@@ -40,7 +85,7 @@ bool manager::receive(uint8_t bus, uint16_t id, const uint8_t data[8]) noexcept
 
 bool manager::special(motor& m, uint8_t opcode) noexcept
 {
-    if (!sender_ || (opcode != 0xfc && opcode != 0xfd && opcode != 0xfe && opcode != 0xfb))
+    if (opcode != 0xfc && opcode != 0xfd && opcode != 0xfe && opcode != 0xfb)
     {
         return false;
     }
@@ -48,7 +93,9 @@ bool manager::special(motor& m, uint8_t opcode) noexcept
     {
         if (entries_[i].ptr == &m)
         {
-            return sender_(ctx_, entries_[i].bus, m.special(opcode));
+            const auto frame = m.special(opcode);
+            return bsp::can::transmit(entries_[i].bus, frame.id, frame.data, frame.length) ==
+                   pnxtypes::status::ok;
         }
     }
     return false;
@@ -65,13 +112,15 @@ void manager::update()
 
 void manager::transmit(uint32_t now_us)
 {
-    if (!sender_)
-    {
-        return;
-    }
     for (uint8_t i = 0; i < count_; ++i)
     {
-        if (tx_[i].due(now_us) && sender_(ctx_, entries_[i].bus, entries_[i].ptr->output()))
+        if (!tx_[i].due(now_us))
+        {
+            continue;
+        }
+        const auto frame = entries_[i].ptr->output();
+        if (bsp::can::transmit(entries_[i].bus, frame.id, frame.data, frame.length) ==
+            pnxtypes::status::ok)
         {
             tx_[i].mark_sent(now_us);
         }
