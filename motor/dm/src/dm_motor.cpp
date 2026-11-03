@@ -48,7 +48,7 @@ bool motor::supports(mode m) const noexcept
 
 result motor::update()
 {
-    output_ = motor::special(0xfd);
+    output_ = motor::special(special_command::disable);
     if (!supports(motor_mode))
     {
         return result::unsupported_mode;
@@ -133,7 +133,7 @@ bool motor::receive(const uint8_t data[8]) noexcept
     return true;
 }
 
-frame_t motor::special(uint8_t opcode) const noexcept
+frame_t motor::special(special_command command) const noexcept
 {
     frame_t frame{};
     frame.id = id_;
@@ -150,7 +150,7 @@ frame_t motor::special(uint8_t opcode) const noexcept
     {
         b = 0xff;
     }
-    frame.data[7] = opcode;
+    frame.data[7] = static_cast<uint8_t>(command);
     return frame;
 }
 } // namespace motor::dm

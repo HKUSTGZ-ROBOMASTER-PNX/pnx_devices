@@ -83,9 +83,10 @@ bool manager::receive(bsp::can::handle bus, uint16_t id, const uint8_t data[8]) 
     return false;
 }
 
-bool manager::special(motor& m, uint8_t opcode) noexcept
+bool manager::special(motor& m, special_command command) noexcept
 {
-    if (opcode != 0xfc && opcode != 0xfd && opcode != 0xfe && opcode != 0xfb)
+    if (command != special_command::enable && command != special_command::disable &&
+        command != special_command::save_zero && command != special_command::clear_error)
     {
         return false;
     }
@@ -93,7 +94,7 @@ bool manager::special(motor& m, uint8_t opcode) noexcept
     {
         if (entries_[i].ptr == &m)
         {
-            const auto frame = m.special(opcode);
+            const auto frame = m.special(command);
             return bsp::can::transmit(entries_[i].bus, frame.id, frame.data, frame.length) ==
                    pnxtypes::status::ok;
         }
