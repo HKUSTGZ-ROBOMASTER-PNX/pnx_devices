@@ -102,6 +102,10 @@ void control_tick(uint32_t now_us)
 }
 ```
 
+无参 `m3508` 使用标准 3591/187 减速比；`gear_ratio::xroll_gearbox` 使用 268/17；
+拆除减速箱时使用 `gear_ratio::direct_drive`，此时速度和位置反馈均按转子轴计算。
+PID 参数仍由调用方设置。
+
 `register_motor()` 必须在 CAN `init()` 前调用，manager 和电机须在回调注销前保持存活。CAN IRQ
 只覆盖固定的最新反馈槽；控制线程周期调用 `update_feedback()`，返回 `true` 表示已消费一帧
 有效反馈。DJI 编码器值超出该型号分辨率时会被拒绝，不刷新在线状态。

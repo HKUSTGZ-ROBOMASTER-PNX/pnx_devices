@@ -47,6 +47,7 @@ struct feedback_t
     float position = 0.0f;
     float velocity = 0.0f;
     float torque = 0.0f;
+    int16_t torque_current_raw = 0;
     float temperature = 0.0f;
 };
 
