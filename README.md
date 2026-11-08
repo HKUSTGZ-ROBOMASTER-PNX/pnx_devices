@@ -157,6 +157,11 @@ RX 回调在中断中执行，向线程传递时先复制数据。一次 idle �
 
 H723 使用 SPI1：CMD PD7、DATA PB4、CLK PB3、CS PE15（低有效）；F407 默认未配置。
 
+F407 接 PS2 时需自行配置 SPI2、片选及板级映射/中断，不能只改 JSON。
+注意 `SCK = PCLK1 / SPI 分频`：默认 PCLK1=42 MHz，`/256` 约为 164 kHz；
+此前手柄测试通过的配置为 PCLK1=21 MHz、`/256`，约 82 kHz，SPI 使用模式 3、LSB first。
+若调整 APB1 时钟，须同步核对 CAN、UART、定时器/PWM 和 HAL 时基。
+
 ```cpp
 static uint8_t tx[remotes::ps2::frame_size]{};
 static uint8_t rx[remotes::ps2::frame_size]{};
