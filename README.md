@@ -103,6 +103,11 @@ void control_tick(uint32_t now_us)
 }
 ```
 
+无参 `m3508` 使用标准 3591/187 减速比；`gear_ratio::xroll_gearbox` 使用 268/17；
+拆除减速箱时使用 `gear_ratio::direct_drive`，此时速度和位置反馈均按转子轴计算。
+DJI 反馈帧中的转矩电流原始值保存在 `fdb.torque_current_raw`；该值不是安培或 Nm，
+未提供电机转矩常数时 `fdb.torque` 保持为 0。PID 参数仍由调用方设置。
+
 初始化成功后周期调用 `control_tick()`。收到至少 8 字节的完整反馈后调用
 `motors.receive(bus, feedback_id, data)`。接收与控制不能并发修改同一电机，可先复制反馈，
 再交给控制线程处理。发送回调中的帧只在调用期间有效，异步发送前须复制到持久缓冲区。

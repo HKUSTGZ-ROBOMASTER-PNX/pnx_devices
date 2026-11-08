@@ -19,7 +19,7 @@ public:
         uint16_t feedback_id) noexcept;
     bool receive(bsp::can::handle bus, uint16_t feedback_id, const uint8_t data[8]) noexcept;
     bool update_feedback(motor& m) noexcept;
-    bool special(motor& m, uint8_t opcode) noexcept;
+    bool special(motor& m, special_command command) noexcept;
     void update() override;
 
     void set_period(float seconds) noexcept

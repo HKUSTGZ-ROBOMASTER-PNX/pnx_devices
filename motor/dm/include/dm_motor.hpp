@@ -11,6 +11,14 @@ enum class firmware_mode : uint8_t
     vel
 };
 
+enum class special_command : uint8_t
+{
+    enable = 0xfc,
+    disable = 0xfd,
+    save_zero = 0xfe,
+    clear_error = 0xfb
+};
+
 struct config_t
 {
     float position_limit;
@@ -40,7 +48,7 @@ public:
         return output_;
     }
 
-    virtual frame_t special(uint8_t opcode) const noexcept;
+    virtual frame_t special(special_command command) const noexcept;
 
     uint8_t error_code() const noexcept
     {

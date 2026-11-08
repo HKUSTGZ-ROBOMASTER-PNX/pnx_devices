@@ -100,5 +100,6 @@ void motor::receive(const uint8_t data[8]) noexcept
     mark_feedback(static_cast<float>(raw_current));
     // Feedback raw current is not calibrated to Nm; retain unknown torque as zero.
     fdb.torque = 0.0f;
+    fdb.torque_current_raw = raw_current;
 }
 } // namespace motor::dji
